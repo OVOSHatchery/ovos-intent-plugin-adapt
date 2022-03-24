@@ -51,6 +51,7 @@ jobs:
       - name: Install core repo
         run: |
           pip install git+https://github.com/NeonJarbas/OVOS-plugin-manager@feat/intent_plugs
+          pip install ovos-lingua-franca
           pip install .
       - name: Install test dependencies
         run: |
