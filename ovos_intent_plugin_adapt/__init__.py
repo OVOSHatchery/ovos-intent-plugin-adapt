@@ -1,7 +1,8 @@
-from adapt.intent import IntentBuilder
 from adapt.engine import IntentDeterminationEngine
-from ovos_plugin_manager.templates.intents import IntentExtractor
+from adapt.intent import IntentBuilder
 from ovos_utils.log import LOG
+
+from ovos_plugin_manager.templates.intents import IntentExtractor
 
 
 class AdaptExtractor(IntentExtractor):
@@ -187,4 +188,3 @@ class AdaptExtractor(IntentExtractor):
         return {
             "intent_names": [p.name for p in self.engine.intent_parsers]
         }
-
