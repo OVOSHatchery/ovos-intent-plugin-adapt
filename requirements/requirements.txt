@@ -1,2 +1,2 @@
-git+https://github.com/NeonJarbas/OVOS-plugin-manager@feat/intent_plugs
+ovos-plugin-manager
 adapt-parser

@@ -50,6 +50,7 @@ jobs:
           python -m pip install build wheel
       - name: Install core repo
         run: |
+          pip install git+https://github.com/NeonJarbas/OVOS-plugin-manager@feat/intent_plugs
           pip install .
       - name: Install test dependencies
         run: |
