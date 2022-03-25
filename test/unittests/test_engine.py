@@ -1,5 +1,7 @@
 import unittest
+
 from lingua_franca.internal import load_language
+
 from ovos_intent_plugin_adapt import AdaptExtractor
 
 
@@ -45,6 +47,23 @@ class TestAdapt(unittest.TestCase):
         intents.register_intent("play_music", ["play", "music"])
 
         self.engine = intents
+
+    def test_base_intents(self):
+        # validate utterance that will be part of other tests
+
+        def test_intent(sent, intent_type):
+            res = self.engine.calc_intent(sent)
+            self.assertEqual(res["intent_engine"], "adapt")
+            self.assertEqual(res["intent_type"], intent_type)
+
+        test_intent("tell me a joke", "joke")
+        test_intent("say hello", "hello")
+        test_intent("tell me the weather", "weather")
+        test_intent("open the door", "door_open")
+        test_intent("close the door", "door_close")
+        test_intent("turn off the lights", "lights_off")
+        test_intent("turn on the lights", "lights_on")
+        test_intent("play some music", "play_music")
 
     def test_single_intent(self):
         # get intent from utterance mycroft style
@@ -114,51 +133,46 @@ class TestAdapt(unittest.TestCase):
         # segment utterance -> calc intent
         # 1 utterance -> N intents
         # segmentation can get any number of sub-utterances
-        # each sub-utterance can have 1 intent *
-        #   * theoretically adapt could yield more than 1 intent
-        #     but most of the time this is a list with a single entry (always?)
+        # each sub-utterance can have 1 intent
 
         def test_intent(sent, expected):
-            res = self.engine.calc_intents_list(sent, min_conf=0.1)
-
+            res = self.engine.calc_intents_list(sent)
             expected_segments = expected.keys()
-
             self.assertEqual(set(res.keys()), set(expected_segments))
-
             for utt, intents in expected.items():
                 utt_intents = [i["intent_type"] for i in res[utt]]
                 self.assertEqual(intents, utt_intents)
 
         # multiple known intents in utterance
         test_intent("tell me a joke and say hello",
-                    {'say hello': ["hello"], 'tell me joke': ["joke"]})
+                    {'say hello': ["hello"], 'tell me a joke': ["joke"]})
         test_intent("tell me a joke and the weather",
-                    {'weather': ['weather'], 'tell me joke': ["joke"]})
+                    {'the weather': ['weather'], 'tell me a joke': ["joke"]})
 
         # unknown intents
         test_intent("nice work! get me a beer",
-                    {'get me beer': [], 'nice work': []})
+                    {'get me a beer': ["unknown"], 'nice work': ["unknown"]})
 
         # conflicting/badly modeled intents -> no conflict due to good segmentation
         test_intent("turn off the lights, open the door",
-                    {'turn off lights': ["lights_off"], 'open door': ["door_open"]})
+                    {'turn off the lights': ["lights_off"], 'open the door': ["door_open"]})
 
         # failed segmentation (no markers to split)
         test_intent("close the door turn off the lights",
-                    {'close door turn off lights': ["lights_off"]})
+                    {'close the door turn off the lights': ["lights_off"]})
         test_intent("close the pod bay doors play some music",
-                    {'close pod bay doors play some music': ["door_close"]})
+                    {'close the pod bay doors play some music': ["door_close"]})
 
         # known + unknown intents in utterance + failed segmentation
         test_intent("tell me a joke order some pizza",
-                    {'tell me joke order some pizza': ["joke"]})
-        test_intent("Call mom tell her hello",
-                    {'Call mom tell her hello': ["hello"]})  # "hello" intent is closest match
+                    {'tell me a joke order some pizza': ["joke"]})
+        test_intent("call mom tell her hello",
+                    {'call mom tell her hello': ["hello"]})  # "hello" intent is closest match
 
         # conflicting/badly modeled intents -> conflict due to failed segmentation
         # NOTE: this one works by coincidence basically, could easily be door_open and lights_off
         test_intent("turn on the lights close the door",
-                    {'turn on lights close door': ["lights_on"]})  # "on" and "close" conflict
+                    {'turn on the lights close the door': ["lights_on"]})  # "on" and "close" conflict
 
     def test_segment_main_secondary_intent(self):
         # segment -> get intent -> get intent from utt remainder
@@ -166,18 +180,14 @@ class TestAdapt(unittest.TestCase):
         # segmentation can get any number of sub-utterances
         # each sub-utterance can have 2 intents
 
-        def test_intent(sent, expected):
-            res = self.engine.intents_remainder(sent)
-            expected_segments = expected.keys()
-
-            self.assertEqual(set(res.keys()), set(expected_segments))
-
-            for utt, intent in expected.items():
-                utt_intents = res[utt]
-                first = utt_intents[0]
-
-                self.assertEqual(first["intent_engine"], "adapt")
-                self.assertEqual(first["intent_type"], intent)
+        def test_intent(sent, expected, min_conf=0.5):
+            for res in self.engine.intents_remainder(sent):
+                if res["conf"] < min_conf:
+                    continue
+                utt = res["utterance"]
+                self.assertEqual(res["intent_engine"], "adapt")
+                self.assertIn(utt, expected)
+                self.assertEqual(res["intent_type"], expected[utt])
 
         # multiple known intents in utterance
         test_intent("tell me a joke and say hello",
@@ -195,7 +205,8 @@ class TestAdapt(unittest.TestCase):
 
         # failed segmentation (no markers to split)
         test_intent("close the door turn off the lights",
-                    {'close door turn off lights': "lights_off"})
+                    {'close door turn off lights': "lights_off",
+                     'door turn off': "door_close"})
         test_intent("close the pod bay doors play some music",
                     {'close pod bay doors play some music': "door_close"})
 
@@ -208,5 +219,5 @@ class TestAdapt(unittest.TestCase):
         # conflicting/badly modeled intents -> conflict due to failed segmentation
         # NOTE: this one works by coincidence basically, could easily be door_open and lights_off
         test_intent("turn on the lights close the door",
-                    {'turn on lights close door': "lights_on"})  # "on" and "close" conflict
-
+                    {'turn on the lights': "lights_on",
+                     'turn close door': "door_close"})  # "on" and "close" conflict

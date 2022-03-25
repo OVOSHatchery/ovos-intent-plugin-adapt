@@ -38,7 +38,7 @@ class AdaptExtractor(IntentExtractor):
         :param optional_samples: list of optional registered samples (names)
         :return:
         """
-        super().register_entity(intent_name, samples)
+        super().register_intent(intent_name, samples)
         if not samples:
             samples = [intent_name]
             self.register_entity(intent_name, samples)
@@ -53,14 +53,14 @@ class AdaptExtractor(IntentExtractor):
         self.engine.register_intent_parser(intent.build())
         return intent
 
-    def calc_intent(self, utterance):
+    def calc_intent(self, utterance, min_conf=0.0):
         utterance = utterance.strip()
         if self.normalize:
             utterance = self.normalize_utterance(utterance, self.lang, True)
         for intent in self.engine.determine_intent(utterance, 100,
                                                    include_tags=True,
                                                    context_manager=self.context_manager):
-            if intent and intent.get('confidence') > 0:
+            if intent and intent.get('confidence') >= min_conf:
                 intent.pop("target")
                 matches = {k: v for k, v in intent.items() if
                            k not in ["intent_type", "confidence", "__tags__"]}
@@ -79,103 +79,15 @@ class AdaptExtractor(IntentExtractor):
                 "utterance_remainder": utterance,
                 "utterance": utterance, "intent_engine": "adapt"}
 
-    def calc_intents(self, utterance, min_conf=0.5):
-        bucket = {}
-        for ut in self.segmenter.segment(utterance):
-            intent = self.calc_intent(ut)
-            if intent["conf"] < min_conf:
-                bucket[ut] = None
-            else:
-                bucket[ut] = intent
-        return bucket
-
-    def calc_intents_list(self, utterance, min_conf=0.5):
-        utterance = utterance.strip()  # spaces should not mess with exact matches
-        bucket = {}
-        for ut in self.segmenter.segment(utterance):
-
-            if self.normalize:
-                ut = self.normalize_utterance(ut, self.lang, True)
-            bucket[ut] = []
-            for intent in self.engine.determine_intent(ut, 100,
-                                                       include_tags=True,
-                                                       context_manager=self.context_manager):
-                if intent:
-                    intent.pop("target")
-                    matches = {k: v for k, v in intent.items() if
-                               k not in ["intent_type", "confidence",
-                                         "__tags__"]}
-                    intent["entities"] = {}
-                    for k in matches:
-                        intent["entities"][k] = intent.pop(k)
-                    intent["conf"] = intent.pop("confidence")
-                    intent["utterance"] = ut
-                    intent["intent_engine"] = "adapt"
-                    remainder = self.get_utterance_remainder(
-                        utterance, samples=[v for v in matches.values()])
-                    intent["utterance_remainder"] = remainder
-                    if intent["conf"] >= min_conf:
-                        bucket[ut] += [intent]
-
-        return bucket
-
-    def intent_scores(self, utterance):
-        utterance = utterance.strip()  # spaces should not mess with exact matches
-        bucket = []
-        for intent in self.engine.determine_intent(utterance, 100,
-                                                   include_tags=True,
-                                                   context_manager=self.context_manager):
-            if intent:
-                intent.pop("target")
-                matches = {k: v for k, v in intent.items() if
-                           k not in ["intent_type", "confidence", "__tags__"]}
-                intent["entities"] = {}
-                for k in matches:
-                    intent["entities"][k] = intent.pop(k)
-                intent["conf"] = intent.pop("confidence")
-                intent["intent_engine"] = "adapt"
-                intent["utterance"] = utterance
-
-                remainder = self.get_utterance_remainder(
-                    utterance, samples=[v for v in matches.values()])
-                intent["utterance_remainder"] = remainder
-                bucket += [intent]
-        return bucket
-
-    def intent_remainder(self, utterance, _prev=""):
-        utterance = utterance.strip()  # spaces should not mess with exact matches
-        if self.normalize:
-            utterance = self.normalize_utterance(utterance, self.lang, True)
-        return IntentExtractor.intent_remainder(self, utterance)
-
-    def intents_remainder(self, utterance, min_conf=0.5):
-        """
-        segment utterance and for each chunk recursively check for intents in utterance remainer
-
-        :param utterance:
-        :param min_conf:
-        :return:
-        """
-        utterance = utterance.strip()  # spaces should not mess with exact matches
-        bucket = {}
-        for utterance in self.segmenter.segment(utterance):
-            if self.normalize:
-                utterance = self.normalize_utterance(utterance, self.lang, True)
-            bucket[utterance] = self.intent_remainder(utterance)
-        return bucket
-
-    def segment(self, text):
-        if self.normalize:
-            text = self.normalize_utterance(text, self.lang, True)
-        return self.segment(text)
-
     def detach_intent(self, intent_name):
+        super().detach_intent(intent_name)
         LOG.debug("detaching adapt intent: " + intent_name)
         new_parsers = [
             p for p in self.engine.intent_parsers if p.name != intent_name]
         self.engine.intent_parsers = new_parsers
 
     def detach_skill(self, skill_id):
+        super().detach_skill(skill_id)
         LOG.debug("detaching adapt skill: " + skill_id)
         new_parsers = [
             p.name for p in self.engine.intent_parsers if
