@@ -1,8 +1,8 @@
 # Changelog
 
-## [Unreleased](https://github.com/OpenVoiceOS/ovos-intent-plugin-adapt/tree/HEAD)
+## [V0.0.0a1](https://github.com/OpenVoiceOS/ovos-intent-plugin-adapt/tree/V0.0.0a1) (2022-03-24)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-intent-plugin-adapt/compare/f1c47bb409994901003df89fda78a455ef095ba0...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-intent-plugin-adapt/compare/f1c47bb409994901003df89fda78a455ef095ba0...V0.0.0a1)
 
 **Merged pull requests:**
 
