@@ -1,16 +1,19 @@
 from adapt.engine import IntentDeterminationEngine
 from adapt.intent import IntentBuilder
 from ovos_utils.log import LOG
-
-from ovos_plugin_manager.templates.intents import IntentExtractor
+from ovos_plugin_manager.intents import IntentExtractor, IntentPriority, IntentDeterminationStrategy
 
 
 class AdaptExtractor(IntentExtractor):
     keyword_based = True
     regex_entity_support = True
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, config=None,
+                 strategy=IntentDeterminationStrategy.SEGMENT_REMAINDER,
+                 priority=IntentPriority.KEYWORDS_HIGH,
+                 segmenter=None):
+        super().__init__(config, strategy=strategy,
+                         priority=priority, segmenter=segmenter)
         self.engine = IntentDeterminationEngine()
 
     def register_entity(self, entity_name, samples=None):
