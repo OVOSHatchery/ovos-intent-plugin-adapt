@@ -30,36 +30,40 @@ class AdaptExtractor(IntentExtractor):
                 self.engine.register_regex_entity(s)
 
     def register_regex_intent(self, intent_name, samples):
-        self.register_regex_entity(intent_name + "_adapt_rx", samples)
-        self.register_intent(intent_name, [intent_name + "_adapt_rx"])
+        self.register_regex_entity(intent_name, samples)
+        self.register_keyword_intent(intent_name, [intent_name])
 
-    def register_intent(self, intent_name, samples=None,
-                        optional_samples=None, rx_samples=None):
-        """
-        :param intent_name: intent_name
-        :param samples: list of required registered entities (names)
-        :param optional_samples: list of optional registered samples (names)
-        :return:
-        """
-        super().register_intent(intent_name, samples)
-        if not samples:
-            samples = [intent_name]
-            self.register_entity(intent_name, samples)
-        optional_samples = optional_samples or []
+    def register_keyword_intent(self, intent_name,
+                                keywords=None,
+                                optional=None,
+                                at_least_one=None,
+                                excluded=None):
+        if not keywords:
+            keywords = keywords or [intent_name]
+            self.register_entity(intent_name, keywords)
+        optional = optional or []
+        excluded = excluded or []
+        at_least_one = at_least_one or []
+        super().register_keyword_intent(intent_name, keywords, optional, at_least_one, excluded)
 
         # structure intent
         intent = IntentBuilder(intent_name)
-        for kw in samples:
+        for kw in keywords:
             intent.require(kw)
-        for kw in optional_samples:
+        for kw in optional:
             intent.optionally(kw)
+        # TODO exclude functionality not yet merged
+        #  https://github.com/MycroftAI/adapt/pull/156
         self.engine.register_intent_parser(intent.build())
         return intent
 
+    def register_intent(self, intent_name, samples=None):
+        super().register_intent(intent_name, samples)
+        # adapt is keyword based, but will work for exact matches
+        return self.register_keyword_intent(intent_name, samples)
+
     def calc_intent(self, utterance, min_conf=0.0):
         utterance = utterance.strip()
-        if self.normalize:
-            utterance = self.normalize_utterance(utterance, self.lang, True)
         for intent in self.engine.determine_intent(utterance, 100,
                                                    include_tags=True,
                                                    context_manager=self.context_manager):
