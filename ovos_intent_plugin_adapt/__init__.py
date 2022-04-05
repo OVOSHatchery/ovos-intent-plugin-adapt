@@ -5,9 +5,6 @@ from ovos_plugin_manager.intents import IntentExtractor, IntentPriority, IntentD
 
 
 class AdaptExtractor(IntentExtractor):
-    keyword_based = True
-    regex_entity_support = True
-
     def __init__(self, config=None,
                  strategy=IntentDeterminationStrategy.SEGMENT_REMAINDER,
                  priority=IntentPriority.KEYWORDS_HIGH,
@@ -16,35 +13,38 @@ class AdaptExtractor(IntentExtractor):
                          priority=priority, segmenter=segmenter)
         self.engine = IntentDeterminationEngine()
 
-    def register_entity(self, entity_name, samples=None):
+    def register_entity(self, entity_name, samples=None, lang=None):
         samples = samples or [entity_name]
         for kw in samples:
             self.engine.register_entity(kw, entity_name)
-        super().register_entity(entity_name, samples)
+        super().register_entity(entity_name, samples, lang)
 
-    def register_regex_entity(self, entity_name, samples):
+    def register_regex_entity(self, entity_name, samples, lang=None):
         if isinstance(samples, str):
             self.engine.register_regex_entity(samples)
         if isinstance(samples, list):
             for s in samples:
                 self.engine.register_regex_entity(s)
+        super().register_regex_entity(entity_name, samples, lang)
 
-    def register_regex_intent(self, intent_name, samples):
+    def register_regex_intent(self, intent_name, samples, lang=None):
         self.register_regex_entity(intent_name, samples)
         self.register_keyword_intent(intent_name, [intent_name])
+        super().register_regex_intent(intent_name, samples, lang)
 
     def register_keyword_intent(self, intent_name,
                                 keywords=None,
                                 optional=None,
                                 at_least_one=None,
-                                excluded=None):
+                                excluded=None,
+                                lang=None):
         if not keywords:
             keywords = keywords or [intent_name]
             self.register_entity(intent_name, keywords)
         optional = optional or []
         excluded = excluded or []
         at_least_one = at_least_one or []
-        super().register_keyword_intent(intent_name, keywords, optional, at_least_one, excluded)
+        super().register_keyword_intent(intent_name, keywords, optional, at_least_one, excluded, lang)
 
         # structure intent
         intent = IntentBuilder(intent_name)
@@ -57,12 +57,7 @@ class AdaptExtractor(IntentExtractor):
         self.engine.register_intent_parser(intent.build())
         return intent
 
-    def register_intent(self, intent_name, samples=None):
-        super().register_intent(intent_name, samples)
-        # adapt is keyword based, but will work for exact matches
-        return self.register_keyword_intent(intent_name, samples)
-
-    def calc_intent(self, utterance, min_conf=0.0):
+    def calc_intent(self, utterance, min_conf=0.5, lang=None):
         utterance = utterance.strip()
         for intent in self.engine.determine_intent(utterance, 100,
                                                    include_tags=True,
@@ -82,9 +77,7 @@ class AdaptExtractor(IntentExtractor):
                     utterance, samples=[v for v in matches.values()])
                 intent["utterance_remainder"] = remainder
                 return intent
-        return {"conf": 0, "intent_type": "unknown", "entities": {},
-                "utterance_remainder": utterance,
-                "utterance": utterance, "intent_engine": "adapt"}
+        return None
 
     def detach_intent(self, intent_name):
         super().detach_intent(intent_name)
@@ -101,9 +94,3 @@ class AdaptExtractor(IntentExtractor):
             p.name.startswith(skill_id)]
         for intent_name in new_parsers:
             self.detach_intent(intent_name)
-
-    def manifest(self):
-        # TODO vocab, skill ids, intent_data
-        return {
-            "intent_names": [p.name for p in self.engine.intent_parsers]
-        }
