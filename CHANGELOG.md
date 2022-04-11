@@ -1,5 +1,13 @@
 # Changelog
 
+## [V0.0.0a4](https://github.com/OpenVoiceOS/ovos-intent-plugin-adapt/tree/V0.0.0a4) (2022-04-05)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-intent-plugin-adapt/compare/V0.0.0a3...V0.0.0a4)
+
+## [V0.0.0a3](https://github.com/OpenVoiceOS/ovos-intent-plugin-adapt/tree/V0.0.0a3) (2022-04-01)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-intent-plugin-adapt/compare/V0.0.0a2...V0.0.0a3)
+
 ## [V0.0.0a2](https://github.com/OpenVoiceOS/ovos-intent-plugin-adapt/tree/V0.0.0a2) (2022-03-31)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-intent-plugin-adapt/compare/V0.0.0a1...V0.0.0a2)
