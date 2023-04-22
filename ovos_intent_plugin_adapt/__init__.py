@@ -5,6 +5,14 @@ from ovos_plugin_manager.intents import IntentExtractor, IntentPriority, IntentD
 from ovos_utils.log import LOG
 
 
+def _munge(name, skill_id):
+    return f"{name}:{skill_id}"
+
+
+def _unmunge(munged):
+    return munged.split(":", 2)
+
+
 class AdaptExtractor(IntentExtractor):
     def __init__(self, config=None,
                  strategy=IntentDeterminationStrategy.SEGMENT_REMAINDER,
@@ -21,41 +29,46 @@ class AdaptExtractor(IntentExtractor):
             self.engines[lang] = IntentDeterminationEngine()
         return self.engines[lang]
 
-    def register_entity(self, entity_name, samples=None, lang=None):
+    def register_entity(self, skill_id, entity_name, samples=None, lang=None):
         samples = samples or [entity_name]
+        super().register_entity(skill_id, entity_name, samples, lang)
         engine = self._get_engine(lang)
         for kw in samples:
             engine.register_entity(kw, entity_name)
-        super().register_entity(entity_name, samples, lang)
 
-    def register_regex_entity(self, entity_name, samples, lang=None):
+    def register_regex_entity(self, skill_id, entity_name, samples, lang=None):
+        lang = lang or self._excludes
+        super().register_regex_entity(skill_id, entity_name, samples, lang)
         engine = self._get_engine(lang)
         if isinstance(samples, str):
             engine.register_regex_entity(samples)
         if isinstance(samples, list):
             for s in samples:
                 engine.register_regex_entity(s)
-        super().register_regex_entity(entity_name, samples, lang)
 
-    def register_regex_intent(self, intent_name, samples, lang=None):
-        self.register_regex_entity(intent_name, samples)
-        self.register_keyword_intent(intent_name, [intent_name])
-        super().register_regex_intent(intent_name, samples, lang)
+    def register_regex_intent(self, skill_id, intent_name, samples, lang=None):
+        self.register_regex_entity(skill_id, intent_name, samples)
+        self.register_keyword_intent(skill_id, intent_name, [intent_name])
+        super().register_regex_intent(skill_id, intent_name, samples, lang)
 
-    def register_keyword_intent(self, intent_name,
+    def register_keyword_intent(self, skill_id, intent_name,
                                 keywords=None,
                                 optional=None,
                                 at_least_one=None,
                                 excluded=None,
                                 lang=None):
+        lang = lang or self.lang
+        super().register_keyword_intent(skill_id, intent_name, keywords, optional, at_least_one, excluded, lang)
+
         engine = self._get_engine(lang)
+        intent_name = _munge(intent_name, skill_id)
+
         if not keywords:
             keywords = keywords or [intent_name]
             self.register_entity(intent_name, keywords)
         optional = optional or []
         excluded = excluded or []
         at_least_one = at_least_one or []
-        super().register_keyword_intent(intent_name, keywords, optional, at_least_one, excluded, lang)
 
         # structure intent
         intent = IntentBuilder(intent_name)
@@ -95,28 +108,19 @@ class AdaptExtractor(IntentExtractor):
 
                 remainder = self.get_utterance_remainder(utterance, samples=[v for v in matches.values()])
                 intent["utterance_remainder"] = remainder
-                skill_id = self.get_intent_skill_id(intent["intent_type"])
+                intent_type, skill_id = _unmunge(intent["intent_type"])
                 return IntentMatch(intent_service=intent["intent_engine"],
-                                   intent_type=intent["intent_type"],
+                                   intent_type=intent_type,
                                    intent_data=intent,
                                    confidence=intent["conf"],
                                    skill_id=skill_id)
         return None
 
-    def detach_intent(self, intent_name):
+    def detach_intent(self, skill_id, intent_name):
         super().detach_intent(intent_name)
         LOG.debug("detaching adapt intent: " + intent_name)
+        intent_name = _munge(intent_name, skill_id)
         for lang in self.engines:
             new_parsers = [p for p in self.engines[lang].intent_parsers
                            if p.name != intent_name]
             self.engines[lang].intent_parsers = new_parsers
-
-    def detach_skill(self, skill_id):
-        super().detach_skill(skill_id)
-        LOG.debug("detaching adapt skill: " + skill_id)
-        for lang in self.engines:
-            new_parsers = [
-                p.name for p in self.engines[lang].intent_parsers if
-                p.name.startswith(skill_id)]
-            for intent_name in new_parsers:
-                self.detach_intent(intent_name)
