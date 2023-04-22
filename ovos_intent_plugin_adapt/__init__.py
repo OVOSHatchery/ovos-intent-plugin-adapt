@@ -1,7 +1,7 @@
 from adapt.engine import IntentDeterminationEngine
 from adapt.intent import IntentBuilder
 from ovos_bus_client.session import SessionManager
-from ovos_plugin_manager.intents import IntentExtractor, IntentPriority, IntentDeterminationStrategy, IntentMatch
+from ovos_plugin_manager.templates.intents import IntentExtractor, IntentPriority, IntentDeterminationStrategy, IntentMatch
 from ovos_utils.log import LOG
 
 
@@ -80,10 +80,11 @@ class AdaptExtractor(IntentExtractor):
         #  https://github.com/MycroftAI/adapt/pull/156
         if excluded:
             self._excludes[intent_name] = excluded
+
         engine.register_intent_parser(intent.build())
         return intent
 
-    def calc_intent(self, utterance, min_conf=0.5, lang=None, session=None):
+    def calc_intent(self, utterance, min_conf=0.2, lang=None, session=None):
         utterance = utterance.strip()
         engine = self._get_engine(lang)
         session = session or SessionManager.get()
