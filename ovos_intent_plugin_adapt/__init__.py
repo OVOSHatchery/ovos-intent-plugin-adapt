@@ -1,7 +1,7 @@
 from adapt.engine import IntentDeterminationEngine
 from adapt.intent import IntentBuilder
 from ovos_bus_client.session import SessionManager
-from ovos_plugin_manager.intents import IntentExtractor, IntentPriority, IntentDeterminationStrategy
+from ovos_plugin_manager.intents import IntentExtractor, IntentPriority, IntentDeterminationStrategy, IntentMatch
 from ovos_utils.log import LOG
 
 
@@ -93,10 +93,14 @@ class AdaptExtractor(IntentExtractor):
                 intent["utterance"] = utterance
                 intent["intent_engine"] = "adapt"
 
-                remainder = self.get_utterance_remainder(
-                    utterance, samples=[v for v in matches.values()])
+                remainder = self.get_utterance_remainder(utterance, samples=[v for v in matches.values()])
                 intent["utterance_remainder"] = remainder
-                return intent
+                skill_id = self.get_intent_skill_id(intent["intent_type"])
+                return IntentMatch(intent_service=intent["intent_engine"],
+                                   intent_type=intent["intent_type"],
+                                   intent_data=intent,
+                                   confidence=intent["conf"],
+                                   skill_id=skill_id)
         return None
 
     def detach_intent(self, intent_name):
