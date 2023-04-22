@@ -10,8 +10,7 @@ class AdaptExtractor(IntentExtractor):
                  strategy=IntentDeterminationStrategy.SEGMENT_REMAINDER,
                  priority=IntentPriority.KEYWORDS_HIGH,
                  segmenter=None):
-        super().__init__(config, strategy=strategy,
-                         priority=priority, segmenter=segmenter)
+        super().__init__(config, strategy=strategy, priority=priority, segmenter=segmenter)
         self.engines = {}  # lang: IntentDeterminationEngine
         self._excludes = {}  # workaround unmerged PR in adapt
         #  https://github.com/MycroftAI/adapt/pull/156
