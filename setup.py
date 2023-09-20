@@ -50,7 +50,7 @@ def required(requirements_file):
                 if pkg.strip() and not pkg.startswith("#")]
 
 
-PLUGIN_ENTRY_POINT = 'ovos-intent-plugin-adapt=ovos_intent_plugin_adapt:AdaptExtractor'
+PLUGIN_ENTRY_POINT = 'ovos-intent-plugin-adapt=ovos_intent_plugin_adapt:AdaptPipelinePlugin'
 
 setup(
     name='ovos-intent-plugin-adapt',
@@ -73,5 +73,5 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
     ],
-    entry_points={'intentbox.intent': PLUGIN_ENTRY_POINT}
+    entry_points={'ovos.pipeline': PLUGIN_ENTRY_POINT}
 )
