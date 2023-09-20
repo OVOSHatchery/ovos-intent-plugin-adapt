@@ -85,43 +85,35 @@ class AdaptPipelinePlugin(IntentPipelinePlugin):
         Args:
             skill_id (str): skill to process
         """
-        super().detach_skill(skill_id)
         with self.lock:
             for lang in self.engines:
+                ents = []
+                for entity in (e for e in self.registered_entities if e.skill_id == skill_id):
+                    munged = _munge(entity.name, skill_id)
+                    ents.append(munged)
+
+                intents = []
+                for intent in (e for e in self.registered_intents if e.skill_id == skill_id):
+                    munged = _munge(intent.name, skill_id)
+                    intents.append(munged)
+
                 skill_parsers = [
                     p.name for p in self.engines[lang].intent_parsers if
-                    p.name.startswith(skill_id)  # munged skill_id/intent_name
+                    p.name in munged  # munged skill_id/intent_name
                 ]
                 self.engines[lang].drop_intent_parser(skill_parsers)
-            self._detach_skill_keywords(skill_id)
-            self._detach_skill_regexes(skill_id)
 
-    def _detach_skill_keywords(self, skill_id):
-        """Detach all keywords registered with a particular skill.
+                def match_skill_entities(data):
+                    return data and data[1] in ents
 
-        Arguments:
-            skill_id (str): skill identifier
-        """
+                def match_skill_regexes(regexp):
+                    return any([r in ents
+                                for r in regexp.groupindex.keys()])
 
-        def match_skill_entities(data):
-            return data and data[1].startswith(skill_id)
+                self.engines[lang].drop_regex_entity(match_func=match_skill_regexes)
+                self.engines[lang].drop_entity(match_func=match_skill_entities)
 
-        for lang in self.engines:
-            self.engines[lang].drop_entity(match_func=match_skill_entities)
-
-    def _detach_skill_regexes(self, skill_id):
-        """Detach all regexes registered with a particular skill.
-
-        Arguments:
-            skill_id (str): skill identifier
-        """
-
-        def match_skill_regexes(regexp):
-            return any([r.startswith(skill_id)
-                        for r in regexp.groupindex.keys()])
-
-        for lang in self.engines:
-            self.engines[lang].drop_regex_entity(match_func=match_skill_regexes)
+        super().detach_skill(skill_id)
 
     def detach_intent(self, skill_id, intent_name):
         super().detach_intent(skill_id, intent_name)
