@@ -1,3 +1,3 @@
 # OVOS Intent Plugin - Adapt
 
-WIP - needs https://github.com/OpenVoiceOS/OVOS-plugin-manager/pull/47
+WIP - needs https://github.com/OpenVoiceOS/ovos-plugin-manager/pull/177
